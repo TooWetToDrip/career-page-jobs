@@ -31,16 +31,16 @@ async function waitForTurn(url, gapMs) {
 /**
  * GET a JSON document with a timeout and a few polite retries.
  * @param {string} url
- * @param {{fetchImpl?: typeof fetch, retries?: number, timeoutMs?: number, backoffMs?: number, minGapMs?: number}} [opts]
+ * @param {{fetchImpl?: typeof fetch, retries?: number, timeoutMs?: number, backoffMs?: number, minGapMs?: number, userAgent?: string}} [opts]
  */
 export async function getJson(url, opts = {}) {
-    const { fetchImpl = fetch, retries = 3, timeoutMs = 30000, backoffMs = 1500, minGapMs = DEFAULT_GAP_MS } = opts;
+    const { fetchImpl = fetch, retries = 3, timeoutMs = 30000, backoffMs = 1500, minGapMs = DEFAULT_GAP_MS, userAgent = USER_AGENT } = opts;
     let lastError;
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
             await waitForTurn(url, minGapMs);
             const res = await fetchImpl(url, {
-                headers: { accept: 'application/json', 'user-agent': USER_AGENT },
+                headers: { accept: 'application/json', 'user-agent': userAgent },
                 signal: AbortSignal.timeout(timeoutMs),
             });
             if (res.status === 404 || res.status === 410) {

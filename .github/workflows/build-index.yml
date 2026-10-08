@@ -1,8 +1,92 @@
 name: Build job index
+
+# Reads every company's public job feed once a day and publishes the job index
+# used by the Career Site Job Search Actor. Runs on GitHub's free machines.
+
 on:
+  schedule:
+    - cron: '17 5 * * *'   # every day at 05:17 UTC (about 1:17 a.m. Eastern)
   workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Companies per hiring system (0 = all)'
+        default: '0'
+      publish:
+        description: 'Publish the index when done (true/false)'
+        default: 'true'
+  push:
+    branches: [v2-search]
+    paths: ['indexer/run-config.json']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-index
+  cancel-in-progress: false
+
 jobs:
-  noop:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INDEX_TAG: index
     steps:
-      - run: echo "placeholder"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Decide what to run
+        id: plan
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            LIMIT=$(node -p "require('./indexer/run-config.json').limit || 0")
+            PUBLISH=$(node -p "require('./indexer/run-config.json').publish === true")
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            LIMIT="${{ inputs.limit }}"
+            PUBLISH="${{ inputs.publish }}"
+          else
+            LIMIT=0
+            PUBLISH=true
+          fi
+          echo "limit=${LIMIT:-0}" >> "$GITHUB_OUTPUT"
+          echo "publish=${PUBLISH:-false}" >> "$GITHUB_OUTPUT"
+          echo "Plan: limit=${LIMIT:-0} publish=${PUBLISH:-false}"
+
+      - name: Fetch yesterday's index (used only for companies that cannot be read today)
+        run: |
+          mkdir -p prev-index
+          for p in greenhouse lever ashby workable; do
+            curl -fsSL --retry 2 -o "prev-index/$p.ndjson.gz" \
+              "https://github.com/${GITHUB_REPOSITORY}/releases/download/${INDEX_TAG}/$p.ndjson.gz" || rm -f "prev-index/$p.ndjson.gz"
+          done
+          ls -la prev-index
+
+      - name: Read the job feeds
+        run: node indexer/build-index.js --out dist-index --previous prev-index --limit "${{ steps.plan.outputs.limit }}"
+
+      - name: Publish the index
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          gh release view "$INDEX_TAG" >/dev/null 2>&1 || gh release create "$INDEX_TAG" \
+            --title "Job index" --latest=false \
+            --notes "Index of open jobs read from public company career feeds, rebuilt automatically every day. Titles, places, dates and links only: no descriptions and no personal data. Used by the Career Site Job Search Actor."
+          gh release upload "$INDEX_TAG" dist-index/*.ndjson.gz dist-index/meta.json --clobber
+
+      - name: Save the run's statistics
+        if: always()
+        run: |
+          [ -f dist-index/meta.json ] || exit 0
+          mkdir stats && cd stats
+          git init -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin index-stats 2>/dev/null; then git checkout -q -b index-stats FETCH_HEAD; else git checkout -q --orphan index-stats; fi
+          cp ../dist-index/meta.json ../dist-index/sample.ndjson ../dist-index/*-not-found.txt ../dist-index/*-failed.json .
+          rm -rf sample-index
+          if [ "${{ steps.plan.outputs.limit }}" != "0" ]; then mkdir sample-index && cp ../dist-index/*.ndjson.gz sample-index/; fi
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Index statistics $(date -u +%FT%H:%MZ) (limit ${{ steps.plan.outputs.limit }})" || exit 0
+          git push -q origin index-stats
