@@ -1,0 +1,17 @@
+{
+  "name": "career-page-jobs",
+  "version": "0.1.0",
+  "description": "Collects open jobs from company career pages hosted on Greenhouse, Lever, Ashby and Workable, in one clean format.",
+  "type": "module",
+  "main": "src/main.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/all.test.js"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,0 +1,73 @@
+{
+  "title": "Career Page Jobs",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "companies": {
+      "title": "Company career pages",
+      "type": "array",
+      "editor": "stringList",
+      "description": "One per line. Paste the career page address (for example https://boards.greenhouse.io/stripe, https://jobs.lever.co/palantir, https://jobs.ashbyhq.com/ramp, https://apply.workable.com/huggingface) or use the short form system:name (greenhouse:stripe, lever:palantir, ashby:ramp, workable:huggingface). Leave empty to try the tool on a built-in starter list.",
+      "prefill": ["greenhouse:stripe", "lever:palantir", "ashby:ramp", "workable:huggingface"]
+    },
+    "titleIncludes": {
+      "title": "Job title must contain (any of)",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Keep a job only if its title contains at least one of these words or phrases. Not case sensitive. Leave empty to keep every title.",
+      "default": []
+    },
+    "titleExcludes": {
+      "title": "Job title must not contain",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Drop a job if its title contains any of these words or phrases. Not case sensitive.",
+      "default": []
+    },
+    "locationIncludes": {
+      "title": "Location must contain (any of)",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Keep a job only if one of its locations contains at least one of these words (for example a city, state or country). Not case sensitive. Leave empty to keep every location.",
+      "default": []
+    },
+    "remoteOnly": {
+      "title": "Remote jobs only",
+      "type": "boolean",
+      "description": "Keep only jobs the company marks as remote.",
+      "default": false
+    },
+    "postedWithinDays": {
+      "title": "Posted within the last N days",
+      "type": "integer",
+      "description": "Keep only jobs published in the last N days. 0 keeps every job. Jobs without a publish date are kept.",
+      "default": 0,
+      "minimum": 0
+    },
+    "onlyNewSinceLastRun": {
+      "title": "Only jobs that are new since the last run",
+      "type": "boolean",
+      "description": "Remembers which jobs it has already returned for you and returns only the ones it has not seen before. Useful on a schedule: each run gives you just the new openings. The first run returns everything.",
+      "default": false
+    },
+    "includeDescription": {
+      "title": "Include the full job description",
+      "type": "boolean",
+      "description": "Adds the job description as plain text. Turn off for smaller, faster results.",
+      "default": true
+    },
+    "includeDescriptionHtml": {
+      "title": "Also include the description as HTML",
+      "type": "boolean",
+      "description": "Adds the original formatted description. Only used when the full description is included.",
+      "default": false
+    },
+    "maxJobsPerCompany": {
+      "title": "Maximum jobs per company",
+      "type": "integer",
+      "description": "Stop after this many matching jobs for each company. 0 means no limit.",
+      "default": 0,
+      "minimum": 0
+    }
+  }
+}

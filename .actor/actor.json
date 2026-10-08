@@ -1,0 +1,13 @@
+{
+  "actorSpecification": 1,
+  "name": "career-page-jobs",
+  "title": "Career Page Jobs (Greenhouse, Lever, Ashby, Workable)",
+  "description": "Collects open jobs straight from company career pages on Greenhouse, Lever, Ashby and Workable and returns them in one clean format. Filter by title, location, remote and date, or return only jobs that are new since the last run.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  },
+  "dockerfile": "../Dockerfile"
+}
