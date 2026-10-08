@@ -2,7 +2,7 @@
 
 Search open jobs across thousands of company career sites with a keyword. No company links needed.
 
-Type what you are looking for, such as `data engineer`, `"account executive"` or `nurse`, add a place or tick remote if you like, and get back one clean row per matching job, newest first. The jobs come straight from the companies' own career sites, not from job boards, so there are no reposts, no agencies and no expired ads padded in.
+Type what you are looking for, such as `data engineer`, `"account executive"` or `nurse`, add a place or tick remote if you like, and get back one clean row per matching job, newest first. The index holds more than 400,000 open jobs read straight from the career sites of more than 12,000 companies, and it is rebuilt every day.
 
 ## Where the jobs come from
 
@@ -86,6 +86,7 @@ You pay per job returned: **$1.50 per 1,000 jobs**, plus a start fee of a fracti
 ## What it does not do
 
 - It covers companies whose careers page runs on Greenhouse, Lever, Ashby or Workable and that are in its directory. It is not every job on the internet, and it leans towards technology companies and startups, which use these systems most.
+- A few of the career sites belong to recruiters and staffing firms that post many jobs for other employers. If one of them fills your list, set **Maximum jobs per company**.
 - Keywords search the job title, not the description text.
 - The index is rebuilt once a day, so a job posted this morning may appear tomorrow, and a job filled today may still show until the next rebuild. Use the live check when that matters.
 - It reads only the public job lists that the hiring systems publish. It does not log in anywhere and does not get around any block.

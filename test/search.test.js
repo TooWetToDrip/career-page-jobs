@@ -66,7 +66,7 @@ function openIndex(index = INDEX, builtAt = daysAgo(0)) {
 }
 async function runSearch(input, extra = {}) {
     const out = collector(extra.limit);
-    const summary = await search(input, { openIndex: openIndex(extra.index, extra.builtAt), pushJobs: out.pushJobs, log: quiet, now: () => NOW, ...extra.deps });
+    const summary = await search(input, { openIndex: openIndex(extra.index, extra.builtAt), pushJobs: out.pushJobs, log: quiet, now: () => NOW, retryWaitMs: 1, ...extra.deps });
     return { summary, items: out.items, ids: out.items.map((r) => r.id) };
 }
 
@@ -222,6 +222,24 @@ test('stops at the spending limit and reports a missing index', async () => {
     assert.equal(none.summary.failed, true);
     assert.equal(none.items.length, 0);
     assert.match(describe(none.summary, NOW), /could not be read/);
+});
+
+test('a download that breaks halfway is read again without counting anything twice', async () => {
+    let opened = 0;
+    const flaky = async function* open(provider) {
+        if (provider !== 'greenhouse') { yield* openIndex()(provider); return; }
+        opened += 1;
+        yield { meta: { provider, builtAt: daysAgo(0) } };
+        yield INDEX.greenhouse[0];
+        if (opened === 1) throw new Error('aborted');
+        yield INDEX.greenhouse[1];
+    };
+    const r = await runSearch({ keywords: ['data engineer'], maxResults: 0 }, { deps: { openIndex: flaky } });
+    assert.equal(opened, 2);
+    assert.deepEqual(r.ids, ['g1', 'l1', 'x1', 'g3']);
+    assert.equal(r.summary.jobsInIndex, 9);
+    assert.equal(r.summary.jobsMatched, 4);
+    assert.deepEqual(r.summary.systemsFailed, []);
 });
 
 test('the status line says how much was found and how fresh the index is', async () => {

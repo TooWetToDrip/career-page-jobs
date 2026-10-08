@@ -1,8 +1,8 @@
 {
   "actorSpecification": 1,
   "name": "career-site-job-search",
-  "title": "Career Site Job Search: 16,000+ Companies",
-  "description": "Search open jobs across 16,000+ company career sites by keyword, place, remote and date. No company links needed. Clean rows with title, location, pay range, dates and apply link. Rebuilt daily from Greenhouse, Lever, Ashby and Workable boards.",
+  "title": "Career Site Job Search: 12,000+ Companies",
+  "description": "Search 400,000+ open jobs from 12,000+ company career sites by keyword, place, remote and date. No company links needed. Clean rows with title, location, pay range, dates and apply link. Rebuilt daily from Greenhouse, Lever, Ashby and Workable job boards.",
   "version": "0.1",
   "buildTag": "latest",
   "dockerfile": "../Dockerfile",

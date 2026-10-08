@@ -135,35 +135,56 @@ export async function search(input, deps) {
         if (keep > 0 && picked.length > keep) picked.length = keep;
     };
 
-    await Promise.all(query.systems.map(async (provider) => {
-        try {
-            for await (const line of deps.openIndex(provider)) {
-                if (line.meta) {
-                    const built = line.meta.builtAt;
-                    if (built && (!summary.indexBuiltAt || built < summary.indexBuiltAt)) summary.indexBuiltAt = built;
-                    continue;
-                }
-                if (!Array.isArray(line.j)) continue;
-                summary.companiesInIndex += 1;
-                summary.jobsInIndex += line.j.length;
-                if (!companyMatches(line, query)) continue;
-                const company = { p: line.p, t: line.t, n: line.n, at: line.at };
-                let hits = line.j.filter((job) => job && job.i != null && job.ti && jobMatches(job, query, nowMs));
-                if (seen) hits = hits.filter((job) => !seen.has(jobKey(company, job.i)));
-                if (!hits.length) continue;
-                summary.jobsMatched += hits.length;
-                if (query.maxPerCompany > 0 && hits.length > query.maxPerCompany) {
-                    hits.sort((a, b) => postedMs(b) - postedMs(a));
-                    hits = hits.slice(0, query.maxPerCompany);
-                }
-                for (const job of hits) picked.push({ company, job });
-                if (keep > 0 && picked.length > keep * 3 + 2000) trim();
+    // Each hiring system has its own index file. A file is read to the end before its jobs count,
+    // so a download that breaks halfway (the file is swapped once a day) can simply be read again.
+    const readOnce = async (provider) => {
+        const part = { builtAt: null, companies: 0, jobs: 0, matched: 0, hits: [] };
+        for await (const line of deps.openIndex(provider)) {
+            if (line.meta) {
+                part.builtAt = line.meta.builtAt || null;
+                continue;
             }
-            summary.systemsRead.push(provider);
-        } catch (err) {
-            summary.systemsFailed.push({ system: provider, reason: (err && err.message) || 'Unknown error' });
-            log.warning(`The ${provider} part of the job index could not be read: ${(err && err.message) || err}`);
+            if (!Array.isArray(line.j)) continue;
+            part.companies += 1;
+            part.jobs += line.j.length;
+            if (!companyMatches(line, query)) continue;
+            const company = { p: line.p, t: line.t, n: line.n, at: line.at };
+            let hits = line.j.filter((job) => job && job.i != null && job.ti && jobMatches(job, query, nowMs));
+            if (seen) hits = hits.filter((job) => !seen.has(jobKey(company, job.i)));
+            if (!hits.length) continue;
+            part.matched += hits.length;
+            if (query.maxPerCompany > 0 && hits.length > query.maxPerCompany) {
+                hits.sort((a, b) => postedMs(b) - postedMs(a));
+                hits = hits.slice(0, query.maxPerCompany);
+            }
+            for (const job of hits) part.hits.push({ company, job });
+            if (keep > 0 && part.hits.length > keep * 3 + 2000) {
+                part.hits.sort(byNewest);
+                part.hits.length = keep;
+            }
         }
+        return part;
+    };
+    await Promise.all(query.systems.map(async (provider) => {
+        const attempts = deps.readAttempts ?? 2;
+        let lastError;
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                const part = await readOnce(provider);
+                if (part.builtAt && (!summary.indexBuiltAt || part.builtAt < summary.indexBuiltAt)) summary.indexBuiltAt = part.builtAt;
+                summary.companiesInIndex += part.companies;
+                summary.jobsInIndex += part.jobs;
+                summary.jobsMatched += part.matched;
+                for (const hit of part.hits) picked.push(hit);
+                summary.systemsRead.push(provider);
+                return;
+            } catch (err) {
+                lastError = err;
+                if (attempt < attempts) await new Promise((resolve) => { setTimeout(resolve, deps.retryWaitMs ?? 5000); });
+            }
+        }
+        summary.systemsFailed.push({ system: provider, reason: (lastError && lastError.message) || 'Unknown error' });
+        log.warning(`The ${provider} part of the job index could not be read: ${(lastError && lastError.message) || lastError}`);
     }));
     trim();
     summary.systemsRead.sort();
