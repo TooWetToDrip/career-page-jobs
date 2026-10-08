@@ -62,7 +62,7 @@ Fields a hiring system does not provide come back as `null`. Greenhouse and Work
 
 ## Price
 
-You pay per job returned: **$1.50 per 1,000 jobs**. A run that returns 200 jobs costs $0.30. Jobs removed by your filters are not charged, and with the only-new switch on, jobs you have already received are not charged again. If you set a spending limit for a run, the tool stops when it is reached and tells you so.
+You pay per job returned: **$1.50 per 1,000 jobs**, plus a start fee of a fraction of a cent per run. A run that returns 200 jobs costs about $0.30. Jobs removed by your filters are not charged, and with the only-new switch on, jobs you have already received are not charged again. If you set a spending limit for a run, the tool stops when it is reached and tells you so.
 
 ## What it does not do
 

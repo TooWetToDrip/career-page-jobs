@@ -1,10 +1,9 @@
-// Entry point on the Apify platform. Everything interesting lives in run.js.
+// Entry point on the Apify platform. Everything interesting lives in run.js and charging.js.
 
 import { Actor, log } from 'apify';
 import { run, describe } from './run.js';
+import { makePusher } from './charging.js';
 
-// The pay-per-event name. It must match the event set up under Monetization in the Apify Console.
-const RESULT_EVENT = 'job-result';
 const SEEN_STORE_NAME = 'career-page-jobs-seen';
 
 await Actor.init();
@@ -25,19 +24,19 @@ try {
         }
     }
 
-    const summary = await run(input, {
-        log,
-        seenStore,
-        pushJobs: async (items) => {
-            // On a pay-per-event Actor this charges one event per saved job and never saves
-            // more than the user's spending limit allows. On a free Actor it just saves.
-            const result = await Actor.pushData(items, RESULT_EVENT);
-            const limitReached = Boolean(result && result.eventChargeLimitReached);
-            const out = { stop: limitReached };
-            if (limitReached && Number.isInteger(result.chargedCount)) out.pushed = result.chargedCount;
-            return out;
-        },
+    let chargingManager = null;
+    try {
+        chargingManager = Actor.getChargingManager();
+    } catch {
+        chargingManager = null;
+    }
+    const pusher = makePusher({
+        pushData: (items, eventName) => (eventName ? Actor.pushData(items, eventName) : Actor.pushData(items)),
+        chargingManager,
     });
+    log.info(`Pricing mode: ${pusher.mode}.`);
+
+    const summary = await run(input, { log, seenStore, pushJobs: pusher.pushJobs });
 
     const message = describe(summary);
     await Actor.setValue('SUMMARY', summary);

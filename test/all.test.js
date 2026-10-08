@@ -4,6 +4,7 @@ import { decodeEntities, htmlToText, toIso, unique, clean } from '../src/text.js
 import { parseSource, parseSources } from '../src/sources.js';
 import { fetchJobs, getJson, normalizeGreenhouse, displayName, SourceError } from '../src/providers.js';
 import { run, readOptions, matches, describe } from '../src/run.js';
+import { makePusher, RESULT_EVENT, DATASET_EVENT } from '../src/charging.js';
 import * as fx from './fixtures.js';
 
 const fast = { retries: 3, backoffMs: 1, timeoutMs: 2000, minGapMs: 0 };
@@ -291,4 +292,62 @@ test('companies without a name in their feed get a readable one', async () => {
     await run({ companies: ['ashby:ramp', 'lever:palantir', 'greenhouse:stripe'], includeDescription: false }, { pushJobs: out.pushJobs, log: quiet, fetchImpl: fx.fakeFetch(), fetchOptions: fast });
     assert.deepEqual([...new Set(out.items.map((i) => i.company))].sort(), ['Palantir', 'Ramp', 'Stripe']);
     assert.ok(out.items.every((i) => i.companyId === i.companyId.toLowerCase()), 'the raw board name stays in companyId');
+});
+
+test('charging: never bills a job twice, whatever pricing is set in the Console', async () => {
+    const calls = [];
+    const pushData = async (items, eventName) => { calls.push([items.length, eventName]); return eventName ? { eventChargeLimitReached: false, chargedCount: items.length } : undefined; };
+    const manager = (prices, max = Infinity) => ({ getPricingInfo: () => ({ isPayPerEvent: true, perEventPrices: prices }), calculateMaxEventChargeCountWithinLimit: () => max });
+    const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+    // No pricing at all (the Actor is free, or the platform gives no charging manager).
+    for (const cm of [null, undefined, {}, { getPricingInfo: () => { throw new Error('x'); } }, manager({})]) {
+        calls.length = 0;
+        const p = makePusher({ pushData, chargingManager: cm });
+        assert.equal(p.mode, 'free');
+        assert.deepEqual(await p.pushJobs(items), { stop: false });
+        assert.deepEqual(calls, [[3, undefined]]);
+    }
+
+    // Built-in per-result event only: the platform charges, the code passes no event name.
+    calls.length = 0;
+    let p = makePusher({ pushData, chargingManager: manager({ 'apify-actor-start': 0.00005, [DATASET_EVENT]: 0.0015 }) });
+    assert.equal(p.mode, 'builtin');
+    assert.deepEqual(await p.pushJobs(items), { stop: false });
+    assert.deepEqual(calls, [[3, undefined]]);
+
+    // Both events priced by mistake: still only the built-in one is used.
+    calls.length = 0;
+    p = makePusher({ pushData, chargingManager: manager({ [DATASET_EVENT]: 0.0015, [RESULT_EVENT]: 0.0015 }) });
+    assert.equal(p.mode, 'builtin');
+    await p.pushJobs(items);
+    assert.deepEqual(calls, [[3, undefined]]);
+
+    // Custom event only: charged from code, by name.
+    calls.length = 0;
+    p = makePusher({ pushData, chargingManager: manager({ [RESULT_EVENT]: 0.0015 }) });
+    assert.equal(p.mode, 'custom');
+    assert.deepEqual(await p.pushJobs(items), { stop: false });
+    assert.deepEqual(calls, [[3, RESULT_EVENT]]);
+    const limited = makePusher({ pushData: async () => ({ eventChargeLimitReached: true, chargedCount: 2 }), chargingManager: manager({ [RESULT_EVENT]: 0.0015 }) });
+    assert.deepEqual(await limited.pushJobs(items), { stop: true, pushed: 2 });
+});
+
+test('charging: with the built-in event it stops at the number of results the spending limit covers', async () => {
+    const saved = [];
+    const pushData = async (items) => { saved.push(...items); };
+    const cm = { getPricingInfo: () => ({ perEventPrices: { [DATASET_EVENT]: 0.0015 } }), calculateMaxEventChargeCountWithinLimit: () => 5 };
+    const p = makePusher({ pushData, chargingManager: cm });
+    assert.deepEqual(await p.pushJobs([{ id: 1 }, { id: 2 }, { id: 3 }]), { stop: false });
+    assert.deepEqual(await p.pushJobs([{ id: 4 }, { id: 5 }, { id: 6 }]), { stop: true, pushed: 2 });
+    assert.deepEqual(await p.pushJobs([{ id: 7 }]), { stop: true, pushed: 0 });
+    assert.deepEqual(saved.map((i) => i.id), [1, 2, 3, 4, 5]);
+    const broken = { getPricingInfo: () => ({ perEventPrices: { [DATASET_EVENT]: 0.0015 } }), calculateMaxEventChargeCountWithinLimit: () => { throw new Error('x'); } };
+    assert.deepEqual(await makePusher({ pushData, chargingManager: broken }).pushJobs([{ id: 8 }]), { stop: false });
+
+    // End to end through run(): a limit of 4 results across companies.
+    const out = [];
+    const four = makePusher({ pushData: async (items) => { out.push(...items); }, chargingManager: { getPricingInfo: () => ({ perEventPrices: { [DATASET_EVENT]: 0.0015 } }), calculateMaxEventChargeCountWithinLimit: () => 4 } });
+    const summary = await run({ companies: ['greenhouse:stripe', 'lever:palantir', 'ashby:ramp', 'workable:huggingface'] }, { pushJobs: four.pushJobs, log: quiet, fetchImpl: fx.fakeFetch(), fetchOptions: fast });
+    assert.equal(out.length, 4); assert.equal(summary.jobsReturned, 4); assert.equal(summary.stoppedAtSpendingLimit, true);
 });
