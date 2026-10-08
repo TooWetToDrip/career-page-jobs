@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { decodeEntities, htmlToText, toIso, unique, clean } from '../src/text.js';
 import { parseSource, parseSources } from '../src/sources.js';
-import { fetchJobs, getJson, normalizeGreenhouse, SourceError } from '../src/providers.js';
+import { fetchJobs, getJson, normalizeGreenhouse, displayName, SourceError } from '../src/providers.js';
 import { run, readOptions, matches, describe } from '../src/run.js';
 import * as fx from './fixtures.js';
 
@@ -279,4 +279,16 @@ test('no personal contact fields are ever copied from a feed', async () => {
         'employmentType', 'postedAt', 'updatedAt', 'url', 'applyUrl', 'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryInterval', 'salaryText',
         'descriptionText', 'descriptionHtml', 'isNew', 'scrapedAt']);
     for (const item of out.items) for (const key of Object.keys(item)) assert.ok(allowed.has(key), `unexpected field ${key}`);
+});
+
+test('companies without a name in their feed get a readable one', async () => {
+    assert.equal(displayName('ramp'), 'Ramp');
+    assert.equal(displayName('hugging-face'), 'Hugging Face');
+    assert.equal(displayName('acme_co.eu'), 'Acme Co Eu');
+    assert.equal(displayName('OpenAI'), 'OpenAI');
+    assert.equal(displayName(''), '');
+    const out = collector();
+    await run({ companies: ['ashby:ramp', 'lever:palantir', 'greenhouse:stripe'], includeDescription: false }, { pushJobs: out.pushJobs, log: quiet, fetchImpl: fx.fakeFetch(), fetchOptions: fast });
+    assert.deepEqual([...new Set(out.items.map((i) => i.company))].sort(), ['Palantir', 'Ramp', 'Stripe']);
+    assert.ok(out.items.every((i) => i.companyId === i.companyId.toLowerCase()), 'the raw board name stays in companyId');
 });

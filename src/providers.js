@@ -78,6 +78,13 @@ function looksRemote(...texts) {
     return texts.some((t) => typeof t === 'string' && /\bremote\b/i.test(t));
 }
 
+/** Lever and Ashby feeds carry no company name, so make a readable one from the board name: "hugging-face" -> "Hugging Face". */
+export function displayName(token) {
+    const t = String(token ?? '').trim();
+    if (!t || /[A-Z]/.test(t)) return t;
+    return t.split(/[-_.]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
 function baseJob(source) {
     return {
         company: null,
@@ -147,7 +154,7 @@ async function fetchGreenhouse(source, want, opts) {
 export function normalizeLever(raw, source, want = {}) {
     const job = baseJob(source);
     const cat = raw.categories || {};
-    job.company = source.token;
+    job.company = displayName(source.token);
     job.id = raw.id != null ? String(raw.id) : null;
     job.title = clean(raw.text);
     job.department = clean(cat.department) || clean(cat.team);
@@ -202,7 +209,7 @@ async function fetchLever(source, want, opts) {
 
 export function normalizeAshby(raw, source, want = {}) {
     const job = baseJob(source);
-    job.company = source.token;
+    job.company = displayName(source.token);
     job.id = raw.id != null ? String(raw.id) : null;
     job.title = clean(raw.title);
     job.department = clean(raw.department);
