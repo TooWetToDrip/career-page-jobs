@@ -1,0 +1,90 @@
+{
+  "title": "Career Site Job Search",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "keywords": {
+      "title": "Job title keywords (any of)",
+      "type": "array",
+      "editor": "stringList",
+      "description": "One search per line. A job is kept if its title matches at least one line. All words on a line must be in the title, in any order: data engineer finds \"Senior Data Engineer\" and \"Engineer, Data Platform\". Put a line in double quotes for the exact phrase: \"machine learning\". Whole words only, so java does not match JavaScript. Leave empty for every title.",
+      "prefill": ["software engineer"]
+    },
+    "excludeKeywords": {
+      "title": "Leave out titles with",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Drop a job if its title matches any of these lines. Same rules as above. For example: senior, intern, \"vice president\"."
+    },
+    "locations": {
+      "title": "Location (any of)",
+      "type": "array",
+      "editor": "stringList",
+      "description": "Keep a job only if one of its listed places contains one of these, as whole words. For example: New York, Germany, London, Remote. Places are written the way each company writes them, so add the variants you care about (United States, USA, US). Leave empty for every place."
+    },
+    "remoteOnly": {
+      "title": "Remote jobs only",
+      "type": "boolean",
+      "description": "Keep only jobs the company marks as remote.",
+      "default": false
+    },
+    "postedWithinDays": {
+      "title": "Posted within the last N days",
+      "type": "integer",
+      "description": "Keep only jobs published in the last N days. 0 keeps every job.",
+      "default": 0,
+      "minimum": 0
+    },
+    "maxResults": {
+      "title": "Maximum number of jobs",
+      "type": "integer",
+      "description": "The newest matching jobs are returned first, up to this number. 0 means no limit. You pay only for jobs returned.",
+      "default": 100,
+      "minimum": 0
+    },
+    "companies": {
+      "title": "Only these companies",
+      "type": "array",
+      "editor": "stringList",
+      "sectionCaption": "Narrow it further (optional)",
+      "description": "Company names, one per line, for example Stripe or Hugging Face. Leave empty to search every company in the index."
+    },
+    "systems": {
+      "title": "Only these hiring systems",
+      "type": "array",
+      "editor": "select",
+      "description": "Search only companies whose career site runs on the chosen systems. Leave empty for all four.",
+      "items": {
+        "type": "string",
+        "enum": ["greenhouse", "lever", "ashby", "workable"],
+        "enumTitles": ["Greenhouse", "Lever", "Ashby", "Workable"]
+      }
+    },
+    "maxPerCompany": {
+      "title": "Maximum jobs per company",
+      "type": "integer",
+      "description": "Keep at most this many matching jobs from any one company, newest first. 0 means no limit. Useful when one large employer would fill the whole list.",
+      "default": 0,
+      "minimum": 0
+    },
+    "includeDescription": {
+      "title": "Check each job live and add the full description",
+      "type": "boolean",
+      "sectionCaption": "Descriptions and only-new",
+      "description": "Reads the career site of each matching company during the run. Adds the full job description as plain text and leaves out jobs that have closed since the index was last rebuilt. Adds roughly a second per company, so use it together with a maximum number of jobs.",
+      "default": false
+    },
+    "includeDescriptionHtml": {
+      "title": "Also include the description as HTML",
+      "type": "boolean",
+      "description": "Adds the original formatted description. Only used when the live check is on.",
+      "default": false
+    },
+    "onlyNewSinceLastRun": {
+      "title": "Only jobs I have not been given before",
+      "type": "boolean",
+      "description": "Remembers which jobs it has already returned to you for this exact search and returns only the others. Put the search on a daily schedule to receive just the new openings each day. The first run returns everything that matches.",
+      "default": false
+    }
+  }
+}

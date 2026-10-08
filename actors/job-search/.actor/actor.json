@@ -1,0 +1,19 @@
+{
+  "actorSpecification": 1,
+  "name": "career-site-job-search",
+  "title": "Career Site Job Search: 16,000+ Companies",
+  "description": "Search open jobs across 16,000+ company career sites by keyword, place, remote and date. No company links needed. Clean rows with title, location, pay range, dates and apply link. Rebuilt daily from Greenhouse, Lever, Ashby and Workable boards.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "dockerContextDir": "../../..",
+  "readme": "../README.md",
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  },
+  "defaultMemoryMbytes": 1024,
+  "minMemoryMbytes": 512,
+  "maxMemoryMbytes": 4096
+}

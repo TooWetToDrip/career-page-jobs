@@ -7,7 +7,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node src/main.js",
-    "test": "node --test test/all.test.js"
+    "test": "node --test test/all.test.js test/search.test.js"
   },
   "dependencies": {
     "apify": "^3.4.0"
