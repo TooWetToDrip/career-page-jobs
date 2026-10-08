@@ -1,11 +1,12 @@
 {
   "actorSpecification": 1,
   "name": "career-page-jobs",
-  "title": "Career Page Jobs (Greenhouse, Lever, Ashby, Workable)",
-  "description": "Collects open jobs straight from company career pages on Greenhouse, Lever, Ashby and Workable and returns them in one clean format. Filter by title, location, remote and date, or return only jobs that are new since the last run.",
+  "title": "Career Page Jobs Scraper: Greenhouse, Lever, Ashby",
+  "description": "Collect open jobs straight from company career pages that run on Greenhouse, Lever, Ashby or Workable. Paste career-page links and get clean rows: title, team, location, remote, pay range, dates and apply link. Switch on only-new to pay just for jobs you have not seen before.",
   "version": "0.1",
   "buildTag": "latest",
   "input": "./input_schema.json",
+  "output": "./output_schema.json",
   "storages": {
     "dataset": "./dataset_schema.json"
   },
