@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "builtAt": "2026-10-08T08:32:18.721Z",
+  "sample": true,
+  "providers": {
+    "greenhouse": {
+      "provider": "greenhouse",
+      "companies": 60,
+      "withJobs": 47,
+      "empty": 8,
+      "notFound": 5,
+      "failed": 0,
+      "carriedForward": 0,
+      "jobs": 991,
+      "slowdowns": 0,
+      "seconds": 15,
+      "finalGapMs": 250,
+      "bytes": 37263,
+      "rawBytes": 224500
+    },
+    "lever": {
+      "provider": "lever",
+      "companies": 60,
+      "withJobs": 54,
+      "empty": 5,
+      "notFound": 1,
+      "failed": 0,
+      "carriedForward": 0,
+      "jobs": 704,
+      "slowdowns": 0,
+      "seconds": 31,
+      "finalGapMs": 350,
+      "bytes": 49644,
+      "rawBytes": 284648
+    },
+    "ashby": {
+      "provider": "ashby",
+      "companies": 60,
+      "withJobs": 52,
+      "empty": 5,
+      "notFound": 3,
+      "failed": 0,
+      "carriedForward": 0,
+      "jobs": 1075,
+      "slowdowns": 0,
+      "seconds": 21,
+      "finalGapMs": 350,
+      "bytes": 73870,
+      "rawBytes": 463613
+    },
+    "workable": {
+      "provider": "workable",
+      "companies": 60,
+      "withJobs": 36,
+      "empty": 23,
+      "notFound": 1,
+      "failed": 0,
+      "carriedForward": 0,
+      "jobs": 1166,
+      "slowdowns": 0,
+      "seconds": 36,
+      "finalGapMs": 600,
+      "bytes": 31285,
+      "rawBytes": 337129
+    }
+  },
+  "totals": {
+    "companies": 240,
+    "withJobs": 189,
+    "jobs": 3936,
+    "notFound": 10,
+    "failed": 0
+  }
+}
