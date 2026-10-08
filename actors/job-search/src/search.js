@@ -10,6 +10,8 @@ const PUSH_BATCH = 200;
 const MAX_SEEN = 50000;
 const LIVE_CONCURRENCY = 4;
 const STALE_AFTER_MS = 3 * 86400000;
+// Without a cap, a handful of staffing firms and chains with thousands of near-identical ads fill every list.
+export const DEFAULT_MAX_PER_COMPANY = 5;
 
 function wholeNumber(value, fallback = 0) {
     if (value === undefined || value === null || value === '') return fallback;
@@ -31,7 +33,7 @@ export function readQuery(input = {}) {
         remoteOnly: input.remoteOnly === true,
         postedWithinDays: wholeNumber(input.postedWithinDays),
         maxResults: wholeNumber(input.maxResults, 100),
-        maxPerCompany: wholeNumber(input.maxPerCompany),
+        maxPerCompany: wholeNumber(input.maxPerCompany, DEFAULT_MAX_PER_COMPANY),
         onlyNew: input.onlyNewSinceLastRun === true,
         want: { text: includeDescription, html: includeDescription && input.includeDescriptionHtml === true },
     };
@@ -104,6 +106,8 @@ export async function search(input, deps) {
         jobsInIndex: 0,
         jobsMatched: 0,
         jobsReturned: 0,
+        maxPerCompany: query.maxPerCompany,
+        leftOutByCompanyCap: 0,
         closedSinceIndex: 0,
         liveChecksFailed: 0,
         stoppedAtSpendingLimit: false,
@@ -138,7 +142,7 @@ export async function search(input, deps) {
     // Each hiring system has its own index file. A file is read to the end before its jobs count,
     // so a download that breaks halfway (the file is swapped once a day) can simply be read again.
     const readOnce = async (provider) => {
-        const part = { builtAt: null, companies: 0, jobs: 0, matched: 0, hits: [] };
+        const part = { builtAt: null, companies: 0, jobs: 0, matched: 0, capped: 0, hits: [] };
         for await (const line of deps.openIndex(provider)) {
             if (line.meta) {
                 part.builtAt = line.meta.builtAt || null;
@@ -155,6 +159,7 @@ export async function search(input, deps) {
             part.matched += hits.length;
             if (query.maxPerCompany > 0 && hits.length > query.maxPerCompany) {
                 hits.sort((a, b) => postedMs(b) - postedMs(a));
+                part.capped += hits.length - query.maxPerCompany;
                 hits = hits.slice(0, query.maxPerCompany);
             }
             for (const job of hits) part.hits.push({ company, job });
@@ -175,6 +180,7 @@ export async function search(input, deps) {
                 summary.companiesInIndex += part.companies;
                 summary.jobsInIndex += part.jobs;
                 summary.jobsMatched += part.matched;
+                summary.leftOutByCompanyCap += part.capped;
                 for (const hit of part.hits) picked.push(hit);
                 summary.systemsRead.push(provider);
                 return;
@@ -274,6 +280,7 @@ export function describe(summary, nowMs = Date.now()) {
         text += hours < 1 ? ' (rebuilt within the last hour)' : ` (rebuilt ${hours} hour${hours === 1 ? '' : 's'} ago)`;
     }
     text += '.';
+    if (summary.leftOutByCompanyCap) text += ` At most ${count(summary.maxPerCompany)} per company were kept; set "Maximum jobs per company" to 0 for all of them.`;
     if (summary.closedSinceIndex) text += ` ${count(summary.closedSinceIndex)} had closed since the index was built and were left out.`;
     if (summary.systemsFailed.length) text += ` Part of the index could not be read (${summary.systemsFailed.map((f) => f.system).join(', ')}).`;
     if (summary.stoppedAtSpendingLimit) text += ' Stopped early because your spending limit for this run was reached.';

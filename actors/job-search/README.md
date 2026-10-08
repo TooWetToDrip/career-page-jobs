@@ -31,7 +31,7 @@ One row per job, with the same fields whichever system the company uses:
    - Matching is on whole words, so `java` does not match "JavaScript". Capitals and accents do not matter.
    - Leave it empty to get every title.
 2. **Narrow it down (optional).** Leave out titles with certain words, keep only certain places, only remote jobs, or only jobs posted in the last N days. You can also search only named companies, or cap how many jobs any one company contributes.
-3. **Set the maximum number of jobs.** The newest matching jobs come first. You pay only for jobs returned.
+3. **Set the maximum number of jobs.** The newest matching jobs come first, with at most 5 from any one company unless you change that. You pay only for jobs returned.
 4. **Run it.** Results appear in the dataset, ready to export as JSON, CSV or Excel, or to read through the API.
 
 ### Places
@@ -86,7 +86,7 @@ You pay per job returned: **$1.50 per 1,000 jobs**, plus a start fee of a fracti
 ## What it does not do
 
 - It covers companies whose careers page runs on Greenhouse, Lever, Ashby or Workable and that are in its directory. It is not every job on the internet, and it leans towards technology companies and startups, which use these systems most.
-- A few of the career sites belong to recruiters and staffing firms that post many jobs for other employers. If one of them fills your list, set **Maximum jobs per company**.
+- Some of the career sites belong to staffing firms and to chains that post hundreds of near-identical ads. To keep them from filling your list, each company contributes at most 5 jobs unless you change **Maximum jobs per company** (0 means no limit).
 - Keywords search the job title, not the description text.
 - The index is rebuilt once a day, so a job posted this morning may appear tomorrow, and a job filled today may still show until the next rebuild. Use the live check when that matters.
 - It reads only the public job lists that the hiring systems publish. It does not log in anywhere and does not get around any block.

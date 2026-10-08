@@ -8,7 +8,9 @@
       "type": "array",
       "editor": "stringList",
       "description": "One search per line. A job is kept if its title matches at least one line. All words on a line must be in the title, in any order: data engineer finds \"Senior Data Engineer\" and \"Engineer, Data Platform\". Put a line in double quotes for the exact phrase: \"machine learning\". Whole words only, so java does not match JavaScript. Leave empty for every title.",
-      "prefill": ["software engineer"]
+      "prefill": [
+        "software engineer"
+      ]
     },
     "excludeKeywords": {
       "title": "Leave out titles with",
@@ -42,6 +44,13 @@
       "default": 100,
       "minimum": 0
     },
+    "maxPerCompany": {
+      "title": "Maximum jobs per company",
+      "type": "integer",
+      "description": "Keep at most this many matching jobs from any one company, newest first. This stops staffing firms and chains with hundreds of near-identical ads from filling your list. Set 0 for no limit, for example when you want every opening at the companies you named.",
+      "default": 5,
+      "minimum": 0
+    },
     "companies": {
       "title": "Only these companies",
       "type": "array",
@@ -56,16 +65,19 @@
       "description": "Search only companies whose career site runs on the chosen systems. Leave empty for all four.",
       "items": {
         "type": "string",
-        "enum": ["greenhouse", "lever", "ashby", "workable"],
-        "enumTitles": ["Greenhouse", "Lever", "Ashby", "Workable"]
+        "enum": [
+          "greenhouse",
+          "lever",
+          "ashby",
+          "workable"
+        ],
+        "enumTitles": [
+          "Greenhouse",
+          "Lever",
+          "Ashby",
+          "Workable"
+        ]
       }
-    },
-    "maxPerCompany": {
-      "title": "Maximum jobs per company",
-      "type": "integer",
-      "description": "Keep at most this many matching jobs from any one company, newest first. 0 means no limit. Useful when one large employer would fill the whole list.",
-      "default": 0,
-      "minimum": 0
     },
     "includeDescription": {
       "title": "Check each job live and add the full description",

@@ -14,9 +14,6 @@ on:
       publish:
         description: 'Publish the index when done (true/false)'
         default: 'true'
-  push:
-    branches: [v2-search]
-    paths: ['indexer/run-config.json']
 
 permissions:
   contents: write
@@ -41,10 +38,7 @@ jobs:
       - name: Decide what to run
         id: plan
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            LIMIT=$(node -p "require('./indexer/run-config.json').limit || 0")
-            PUBLISH=$(node -p "require('./indexer/run-config.json').publish === true")
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             LIMIT="${{ inputs.limit }}"
             PUBLISH="${{ inputs.publish }}"
           else

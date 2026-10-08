@@ -242,6 +242,24 @@ test('a download that breaks halfway is read again without counting anything twi
     assert.deepEqual(r.summary.systemsFailed, []);
 });
 
+test('by default no single company can fill the list', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => job(`s${i}`, 'Personal Trainer', { p: daysAgo(i) }));
+    const index = { greenhouse: [{ p: 'greenhouse', t: 'gym', n: 'Gym', at: daysAgo(0), j: many }, INDEX.greenhouse[0]], lever: [], ashby: [], workable: [] };
+    const r = await runSearch({ maxResults: 0 }, { index });
+    assert.equal(r.items.filter((x) => x.companyId === 'gym').length, 5);
+    assert.deepEqual(r.items.filter((x) => x.companyId === 'gym').map((x) => x.id), many.slice(0, 5).map((j) => j.i), 'the newest five are kept');
+    assert.equal(r.items.length, 9);
+    assert.equal(r.summary.jobsMatched, 29);
+    assert.equal(r.summary.leftOutByCompanyCap, 20);
+    assert.match(describe(r.summary, NOW), /At most 5 per company were kept/);
+    const all = await runSearch({ maxResults: 0, maxPerCompany: 0 }, { index });
+    assert.equal(all.items.length, 29);
+    assert.doesNotMatch(describe(all.summary, NOW), /per company/);
+    assert.equal(readQuery({}).maxPerCompany, 5);
+    assert.equal(readQuery({ maxPerCompany: 0 }).maxPerCompany, 0);
+    assert.equal(readQuery({ maxPerCompany: 3 }).maxPerCompany, 3);
+});
+
 test('the status line says how much was found and how fresh the index is', async () => {
     const r = await runSearch({ keywords: ['data engineer'], maxResults: 2 }, { builtAt: daysAgo(0.25) });
     assert.equal(describe(r.summary, NOW), 'Returned 2 jobs of 4 that matched, from an index of 9 open jobs at 3 companies (rebuilt 6 hours ago).');
