@@ -59,9 +59,12 @@ jobs:
           ls -la prev-index
 
       - name: Read the job feeds
-        run: node indexer/build-index.js --out dist-index --previous prev-index --limit "${{ steps.plan.outputs.limit }}"
+        # The build stops starting new companies after 100 minutes and fills the rest from yesterday's index,
+        # so it always finishes well inside the job's time limit.
+        run: node indexer/build-index.js --out dist-index --previous prev-index --limit "${{ steps.plan.outputs.limit }}" --max-minutes 100
 
       - name: Publish the index
+        id: publish
         if: steps.plan.outputs.publish == 'true'
         run: |
           gh release view "$INDEX_TAG" >/dev/null 2>&1 || gh release create "$INDEX_TAG" \
@@ -70,6 +73,21 @@ jobs:
           # The statistics travel with the index as release files. Nothing is pushed to the repository,
           # because every push makes Apify rebuild the Actors.
           gh release upload "$INDEX_TAG" dist-index/*.ndjson.gz dist-index/meta.json dist-index/*-not-found.txt dist-index/*-failed.json --clobber
+
+      - name: Write the build time and counts into the release description
+        id: describe
+        if: steps.plan.outputs.publish == 'true'
+        run: |
+          jq -r '"Last built: \(.builtAt)\nJobs: \(.totals.jobs)\nCompanies with open jobs: \(.totals.withJobs) of \(.totals.companies) checked\nNot found: \(.totals.notFound). Failed today: \(.totals.failed)\n"
+            + (if .seconds then "Build took: \(.seconds/60|round) min (time budget \(.maxMinutes) min)\n" else "" end)
+            + (if .sample then "Trial build: only a sample of the companies.\n" else "" end)
+            + (if .budgetHit then "Time budget reached: \(.notReached) companies were not read today; they use the previous build where it has them.\n" else "" end)
+            + "\n"
+            + ([.providers[] | "- \(.provider): \(.jobs) jobs, \(.withJobs + .carriedForward) companies, \(.failed) failed, \(.slowdowns) slowdowns, \(.seconds/60|round) min (\(.carriedForward) kept from an earlier day, \(.notReached // 0) not reached, \(.retryRecovered // 0) read on the second try, \(.tooManyRequests // 0) answered HTTP 429, gap \(.finalGapMs) ms at the end)"] | join("\n"))' dist-index/meta.json > notes.md
+          printf '\nRun: %s\n' "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> notes.md
+          printf '\n%s\n' "Index of open jobs read from public company career feeds, rebuilt automatically every day. Titles, places, dates and links only: no descriptions and no personal data. Used by the Career Site Job Search Actor." >> notes.md
+          cat notes.md
+          gh release edit "$INDEX_TAG" --notes-file notes.md
 
       - name: Save a trial run's results on a side branch
         if: always() && steps.plan.outputs.limit != '0'
@@ -86,3 +104,29 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Trial index run $(date -u +%FT%H:%MZ) (limit ${{ steps.plan.outputs.limit }})" || exit 0
           git push -q origin index-stats
+
+      # Runs only when something above failed or the run was cancelled (for example at the time limit).
+      # It adds one line to the release description and never makes the result worse.
+      - name: Say so in the release description when a run did not finish
+        if: failure() || cancelled()
+        continue-on-error: true
+        env:
+          PUBLISH: ${{ steps.plan.outputs.publish }}
+          UPLOADED: ${{ steps.publish.outcome }}
+          DESCRIBED: ${{ steps.describe.outcome }}
+        run: |
+          set +e
+          # A manual trial that was not going to publish leaves the release alone.
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$PUBLISH" != "true" ]; then exit 0; fi
+          # Files and description are both up to date: whatever failed came after, so there is nothing to correct.
+          if [ "$UPLOADED" = "success" ] && [ "$DESCRIBED" = "success" ]; then exit 0; fi
+          BODY="$(gh release view "$INDEX_TAG" -R "$GITHUB_REPOSITORY" --json body -q .body)" || exit 0
+          WHEN="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          if [ "$UPLOADED" = "success" ]; then
+            LINE="Last attempt $WHEN uploaded new files, but did not finish and could not update this description."
+          else
+            LINE="Last attempt $WHEN did not finish. The files below are from the previous good build."
+          fi
+          printf '%s\n\n%s\n' "$BODY" "$LINE" > notes-unfinished.md
+          gh release edit "$INDEX_TAG" -R "$GITHUB_REPOSITORY" --notes-file notes-unfinished.md
+          exit 0
